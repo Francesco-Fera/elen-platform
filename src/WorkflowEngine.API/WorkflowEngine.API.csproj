@@ -28,4 +28,8 @@
     <ProjectReference Include="..\WorkflowEngine.Execution\WorkflowEngine.Execution.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers\" />
+  </ItemGroup>
+
 </Project>

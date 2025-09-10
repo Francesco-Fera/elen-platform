@@ -1,7 +1,7 @@
 ﻿using WorkflowEngine.Core.Entities;
 using WorkflowEngine.Core.Enums;
 
-namespace WorkflowEngine.Application.Services.Auth;
+namespace WorkflowEngine.Application.Interfaces.Auth;
 
 public interface ICurrentUserService
 {

@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using WorkflowEngine.Application.Services.Auth;
+using WorkflowEngine.Application.Interfaces.Auth;
 using WorkflowEngine.Core.Enums;
 using WorkflowEngine.Infrastructure.Authorization.Requirements;
 

@@ -1,4 +1,6 @@
-﻿namespace WorkflowEngine.Core.Entities;
+﻿using WorkflowEngine.Core.Enums;
+
+namespace WorkflowEngine.Core.Entities;
 
 public class WorkflowExecution
 {

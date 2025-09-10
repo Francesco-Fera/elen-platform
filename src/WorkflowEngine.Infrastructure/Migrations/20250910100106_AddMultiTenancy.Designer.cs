@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using WorkflowEngine.Infrastructure.Data;
@@ -11,9 +12,11 @@ using WorkflowEngine.Infrastructure.Data;
 namespace WorkflowEngine.Infrastructure.Migrations
 {
     [DbContext(typeof(WorkflowEngineDbContext))]
-    partial class WorkflowEngineDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250910100106_AddMultiTenancy")]
+    partial class AddMultiTenancy
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

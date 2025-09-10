@@ -65,27 +65,27 @@ app.MapGet("/test-db", async (WorkflowEngineDbContext context) =>
     }
 });
 
-app.MapGet("/test", () => "API is working!");
+//app.MapGet("/test", () => "API is working!");
 
 
-app.MapGet("/debug-connection", (IConfiguration config) =>
-{
-    var connectionString = config.GetConnectionString("DefaultConnection");
-    return Results.Ok(new { ConnectionString = connectionString });
-});
+//app.MapGet("/debug-connection", (IConfiguration config) =>
+//{
+//    var connectionString = config.GetConnectionString("DefaultConnection");
+//    return Results.Ok(new { ConnectionString = connectionString });
+//});
 
-app.MapGet("/manual-migrate", async (WorkflowEngineDbContext context) =>
-{
-    try
-    {
-        await context.Database.MigrateAsync();
-        return Results.Ok("Migration successful!");
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem($"Migration failed: {ex.Message}");
-    }
-});
+//app.MapGet("/manual-migrate", async (WorkflowEngineDbContext context) =>
+//{
+//    try
+//    {
+//        await context.Database.MigrateAsync();
+//        return Results.Ok("Migration successful!");
+//    }
+//    catch (Exception ex)
+//    {
+//        return Results.Problem($"Migration failed: {ex.Message}");
+//    }
+//});
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
@@ -108,12 +108,12 @@ app.MapControllers();
 app.MapHealthChecks("/health");
 
 // Auto-migrate database on startup (only in development)
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var context = scope.ServiceProvider.GetRequiredService<WorkflowEngineDbContext>();
-    await context.Database.MigrateAsync();
-}
+//if (app.Environment.IsDevelopment())
+//{
+//    using var scope = app.Services.CreateScope();
+//    var context = scope.ServiceProvider.GetRequiredService<WorkflowEngineDbContext>();
+//    await context.Database.MigrateAsync();
+//}
 
 try
 {

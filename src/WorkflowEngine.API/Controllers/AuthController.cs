@@ -47,20 +47,34 @@ public class AuthController : ControllerBase
                 {
                     accessToken = result.Data!.AccessToken,
                     refreshToken = result.Data.RefreshToken,
+                    expiresIn = 15 * 60,
                     user = new
                     {
                         id = result.Data.User.Id,
                         email = result.Data.User.Email,
                         firstName = result.Data.User.FirstName,
                         lastName = result.Data.User.LastName,
-                        isEmailVerified = result.Data.User.IsEmailVerified
+                        currentOrganizationId = result.Data.User.CurrentOrganizationId,
+                        isEmailVerified = result.Data.User.IsEmailVerified,
+                        timeZone = result.Data.User.TimeZone,
+                        createdAt = result.Data.User.CreatedAt,
+                        updatedAt = result.Data.User.CreatedAt  // TODO: Fix updatedAt
                     },
                     organization = result.Data.CurrentOrganization != null ? new
                     {
                         id = result.Data.CurrentOrganization.Id,
                         name = result.Data.CurrentOrganization.Name,
                         slug = result.Data.CurrentOrganization.Slug,
-                        plan = result.Data.CurrentOrganization.Plan.ToString()
+                        description = result.Data.CurrentOrganization.Description,
+                        domain = result.Data.CurrentOrganization.Domain,
+                        isActive = result.Data.CurrentOrganization.IsActive,
+                        isTrialAccount = result.Data.CurrentOrganization.IsTrialAccount,
+                        trialExpiresAt = result.Data.CurrentOrganization.TrialExpiresAt,
+                        subscriptionPlan = result.Data.CurrentOrganization.Plan.ToString(),
+                        maxUsers = result.Data.CurrentOrganization.MaxUsers,
+                        maxWorkflows = result.Data.CurrentOrganization.MaxWorkflows,
+                        createdAt = result.Data.CurrentOrganization.CreatedAt,
+                        updatedAt = result.Data.CurrentOrganization.UpdatedAt
                     } : null
                 }
             });
@@ -96,20 +110,34 @@ public class AuthController : ControllerBase
                 {
                     accessToken = result.Data!.AccessToken,
                     refreshToken = result.Data.RefreshToken,
+                    expiresIn = 15 * 60,
                     user = new
                     {
                         id = result.Data.User.Id,
                         email = result.Data.User.Email,
                         firstName = result.Data.User.FirstName,
                         lastName = result.Data.User.LastName,
-                        isEmailVerified = result.Data.User.IsEmailVerified
+                        currentOrganizationId = result.Data.User.CurrentOrganizationId,
+                        isEmailVerified = result.Data.User.IsEmailVerified,
+                        timeZone = result.Data.User.TimeZone,
+                        createdAt = result.Data.User.CreatedAt,
+                        updatedAt = result.Data.User.CreatedAt // TODO: Fix updatedAt
                     },
                     organization = new
                     {
                         id = result.Data.CurrentOrganization!.Id,
                         name = result.Data.CurrentOrganization.Name,
                         slug = result.Data.CurrentOrganization.Slug,
-                        plan = result.Data.CurrentOrganization.Plan.ToString()
+                        description = result.Data.CurrentOrganization.Description,
+                        domain = result.Data.CurrentOrganization.Domain,
+                        isActive = result.Data.CurrentOrganization.IsActive,
+                        isTrialAccount = result.Data.CurrentOrganization.IsTrialAccount,
+                        trialExpiresAt = result.Data.CurrentOrganization.TrialExpiresAt,
+                        subscriptionPlan = result.Data.CurrentOrganization.Plan.ToString(),
+                        maxUsers = result.Data.CurrentOrganization.MaxUsers,
+                        maxWorkflows = result.Data.CurrentOrganization.MaxWorkflows,
+                        createdAt = result.Data.CurrentOrganization.CreatedAt,
+                        updatedAt = result.Data.CurrentOrganization.UpdatedAt
                     }
                 }
             });

@@ -33,6 +33,7 @@ public class UserController : ControllerBase
         try
         {
             var user = await _currentUserService.GetCurrentUserAsync();
+            var organization = await _currentUserService.GetCurrentOrganizationAsync();
 
             if (user == null)
             {
@@ -44,15 +45,34 @@ public class UserController : ControllerBase
                 success = true,
                 data = new
                 {
-                    id = user.Id,
-                    email = user.Email,
-                    firstName = user.FirstName,
-                    lastName = user.LastName,
-                    timeZone = user.TimeZone,
-                    isEmailVerified = user.IsEmailVerified,
-                    isActive = user.IsActive,
-                    createdAt = user.CreatedAt,
-                    lastLoginAt = user.LastLoginAt
+                    user = new
+                    {
+                        id = user.Id,
+                        email = user.Email,
+                        firstName = user.FirstName,
+                        lastName = user.LastName,
+                        currentOrganizationId = user.CurrentOrganizationId,
+                        isEmailVerified = user.IsEmailVerified,
+                        timeZone = user.TimeZone,
+                        createdAt = user.CreatedAt,
+                        updatedAt = user.CreatedAt // TODO: Fix updatedAt 
+                    },
+                    organization = organization != null ? new
+                    {
+                        id = organization.Id,
+                        name = organization.Name,
+                        slug = organization.Slug,
+                        description = organization.Description,
+                        domain = organization.Domain,
+                        isActive = organization.IsActive,
+                        isTrialAccount = organization.IsTrialAccount,
+                        trialExpiresAt = organization.TrialExpiresAt,
+                        subscriptionPlan = organization.Plan.ToString(),
+                        maxUsers = organization.MaxUsers,
+                        maxWorkflows = organization.MaxWorkflows,
+                        createdAt = organization.CreatedAt,
+                        updatedAt = organization.UpdatedAt
+                    } : null
                 }
             });
         }

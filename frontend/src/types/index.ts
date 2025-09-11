@@ -20,7 +20,7 @@ export interface Organization {
   isActive: boolean;
   isTrialAccount: boolean;
   trialExpiresAt?: string;
-  subscriptionPlan: "Free" | "Pro" | "Enterprise"; // This maps to Plan enum
+  subscriptionPlan: "Free" | "Pro" | "Enterprise";
   maxUsers: number;
   maxWorkflows: number;
   createdAt: string;
@@ -39,6 +39,7 @@ export interface OrganizationMember {
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  expiresIn: number;
   expiresAt?: string;
 }
 
@@ -53,11 +54,13 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   organizationName: string;
+  timeZone?: string;
 }
 
 export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
+  expiresIn?: number;
   user: User;
   organization: Organization;
 }
@@ -80,7 +83,48 @@ export interface PaginatedResponse<T> {
   hasPreviousPage: boolean;
 }
 
-// Workflow types (basic structure for now)
+// Auth States
+export type AuthState =
+  | "idle"
+  | "loading"
+  | "authenticating"
+  | "authenticated"
+  | "unauthenticated"
+  | "refreshing"
+  | "error";
+
+// Error types
+export type AuthError =
+  | "INVALID_CREDENTIALS"
+  | "TOKEN_EXPIRED"
+  | "TOKEN_INVALID"
+  | "NETWORK_ERROR"
+  | "USER_DEACTIVATED"
+  | "EMAIL_NOT_VERIFIED"
+  | "ORGANIZATION_INACTIVE"
+  | "UNKNOWN_ERROR";
+
+export interface AuthErrorDetails {
+  type: AuthError;
+  message: string;
+  code?: string;
+  field?: string;
+}
+
+// Form validation types
+export interface FormErrors {
+  [key: string]: string;
+}
+
+export interface LoadingStates {
+  login: boolean;
+  register: boolean;
+  logout: boolean;
+  refresh: boolean;
+  profile: boolean;
+}
+
+// Workflow types (keeping existing structure)
 export interface WorkflowNode {
   id: string;
   type: string;
@@ -106,13 +150,4 @@ export interface Workflow {
   connections: WorkflowConnection[];
   createdAt: string;
   updatedAt: string;
-}
-
-// Form validation types
-export interface FormErrors {
-  [key: string]: string;
-}
-
-export interface LoadingState {
-  [key: string]: boolean;
 }

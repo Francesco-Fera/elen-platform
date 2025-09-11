@@ -76,7 +76,7 @@ public class AuthService : IAuthService
             LastName = request.LastName,
             TimeZone = request.TimeZone ?? "UTC",
             IsActive = true,
-            IsEmailVerified = false // Will need email verification
+            IsEmailVerified = false
         };
 
         user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
@@ -84,11 +84,10 @@ public class AuthService : IAuthService
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        // For now, auto-create a personal organization for the user
         var organization = new Organization
         {
-            Name = $"{request.FirstName}'s Organization",
-            Slug = GenerateSlug($"{request.FirstName}-{request.LastName}"),
+            Name = request.OrganizationName,
+            Slug = GenerateSlug(request.OrganizationName),
             IsActive = true,
             Plan = Core.Enums.SubscriptionPlan.Free,
             MaxUsers = 5,

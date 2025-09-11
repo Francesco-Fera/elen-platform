@@ -20,6 +20,10 @@ public class RegisterRequest
     [MaxLength(100)]
     public string LastName { get; set; } = string.Empty;
 
+    [Required]
+    [MaxLength(200)]
+    public string OrganizationName { get; set; } = string.Empty;
+
     [MaxLength(50)]
     public string? TimeZone { get; set; }
 }

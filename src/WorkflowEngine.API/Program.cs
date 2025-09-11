@@ -134,7 +134,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
+        policy.SetIsOriginAllowed(origin => true) // Allow any origin in development
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -226,14 +226,16 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
+app.UseHttpsRedirection();
+
 // Add tenant resolution middleware before authentication
-app.UseMiddleware<TenantResolutionMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<TenantResolutionMiddleware>();
 
 app.MapControllers();
 

@@ -11,7 +11,7 @@ using WorkflowEngine.Infrastructure.Services.Auth;
 
 namespace WorkflowEngine.IntegrationTests;
 
-public class SimpleAuthTests
+public class AuthTests
 {
     [Fact]
     public async Task RegisterUser_ShouldCreateUserAndOrganization()

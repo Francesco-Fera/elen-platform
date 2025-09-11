@@ -12,13 +12,16 @@ public class UserController : ControllerBase
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly ILogger<UserController> _logger;
+    private readonly IUserService _userService;
 
     public UserController(
         ICurrentUserService currentUserService,
-        ILogger<UserController> logger)
+        ILogger<UserController> logger,
+        IUserService userService)
     {
         _currentUserService = currentUserService;
         _logger = logger;
+        _userService = userService;
     }
 
     /// <summary>
@@ -68,15 +71,67 @@ public class UserController : ControllerBase
     {
         try
         {
-            // TODO: Implement profile update logic
-            // This would involve creating a user service to update profile information
+            var updatedUser = await _userService.UpdateProfileAsync(request);
 
-            return Ok(new { success = true, message = "Profile updated successfully" });
+            if (updatedUser == null)
+            {
+                return BadRequest(new { message = "Failed to update profile" });
+            }
+
+            _logger.LogInformation("User {UserId} updated profile", _currentUserService.UserId);
+
+            return Ok(new
+            {
+                success = true,
+                message = "Profile updated successfully",
+                data = new
+                {
+                    id = updatedUser.Id,
+                    email = updatedUser.Email,
+                    firstName = updatedUser.FirstName,
+                    lastName = updatedUser.LastName,
+                    timeZone = updatedUser.TimeZone
+                }
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating profile for user {UserId}", _currentUserService.UserId);
             return StatusCode(500, new { message = "An error occurred while updating profile" });
+        }
+    }
+
+    // <summary>
+    /// Change user password
+    /// </summary>
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        try
+        {
+            if (_currentUserService.UserId == null)
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var success = await _userService.ChangePasswordAsync(
+                _currentUserService.UserId.Value,
+                request.CurrentPassword,
+                request.NewPassword);
+
+            if (!success)
+            {
+                return BadRequest(new { message = "Current password is incorrect" });
+            }
+
+            _logger.LogInformation("User {UserId} changed password", _currentUserService.UserId);
+
+            return Ok(new { success = true, message = "Password changed successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password for user {UserId}", _currentUserService.UserId);
+            return StatusCode(500, new { message = "An error occurred while changing password" });
         }
     }
 
@@ -141,6 +196,72 @@ public class UserController : ControllerBase
         {
             _logger.LogError(ex, "Error getting organizations for user {UserId}", _currentUserService.UserId);
             return StatusCode(500, new { message = "An error occurred while retrieving user organizations" });
+        }
+    }
+
+    /// <summary>
+    /// Search for users (for inviting to organizations)
+    /// </summary>
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchUsers([FromQuery] string q, [FromQuery] int limit = 10)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+            {
+                return BadRequest(new { message = "Search term must be at least 2 characters" });
+            }
+
+            var users = await _userService.SearchUsersAsync(q, Math.Min(limit, 20));
+
+            return Ok(new
+            {
+                success = true,
+                data = users.Select(u => new
+                {
+                    id = u.Id,
+                    email = u.Email,
+                    firstName = u.FirstName,
+                    lastName = u.LastName,
+                    fullName = $"{u.FirstName} {u.LastName}".Trim()
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching users with term {SearchTerm}", q);
+            return StatusCode(500, new { message = "An error occurred while searching users" });
+        }
+    }
+
+    /// <summary>
+    /// Deactivate user account
+    /// </summary>
+    [HttpPost("deactivate")]
+    public async Task<IActionResult> DeactivateAccount()
+    {
+        try
+        {
+            if (_currentUserService.UserId == null)
+            {
+                return Unauthorized(new { message = "User not authenticated" });
+            }
+
+            var success = await _userService.DeactivateUserAsync(_currentUserService.UserId.Value);
+
+            if (!success)
+            {
+                return BadRequest(new { message = "Failed to deactivate account" });
+            }
+
+            _logger.LogInformation("User {UserId} deactivated account", _currentUserService.UserId);
+
+            return Ok(new { success = true, message = "Account deactivated successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deactivating account for user {UserId}", _currentUserService.UserId);
+            return StatusCode(500, new { message = "An error occurred while deactivating account" });
         }
     }
 }

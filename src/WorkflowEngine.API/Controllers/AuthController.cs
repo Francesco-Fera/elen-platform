@@ -185,21 +185,30 @@ public class AuthController : ControllerBase
     /// Logout and revoke refresh token
     /// </summary>
     [HttpPost("logout")]
-    [Authorize]
     public async Task<IActionResult> Logout([FromBody] RefreshTokenRequest request)
     {
         try
         {
+            var userId = _currentUserService.UserId;
+
             await _authService.LogoutAsync(request.RefreshToken);
 
-            _logger.LogInformation("User {UserId} logged out successfully", _currentUserService.UserId);
+            if (userId.HasValue)
+            {
+                _logger.LogInformation("User {UserId} logged out successfully", userId);
+            }
+            else
+            {
+                _logger.LogInformation("Anonymous logout with refresh token");
+            }
 
             return Ok(new { success = true, message = "Logged out successfully" });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during logout for user {UserId}", _currentUserService.UserId);
-            return StatusCode(500, new { message = "An error occurred during logout" });
+            _logger.LogWarning(ex, "Error during logout with refresh token");
+
+            return Ok(new { success = true, message = "Logged out successfully" });
         }
     }
 

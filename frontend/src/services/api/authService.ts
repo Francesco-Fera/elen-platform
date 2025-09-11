@@ -66,6 +66,7 @@ export const authService = {
   },
 
   async logout(refreshToken: string): Promise<ApiResponse> {
+    console.log("Logging out with token:", refreshToken);
     console.log("🔧 AuthService: Calling logout...");
     try {
       const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGOUT, {

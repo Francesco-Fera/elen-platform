@@ -13,6 +13,9 @@ import { DashboardPage } from "./pages/dashboard/DashboardPage";
 import { LoadingSpinner } from "./components/common";
 import { ROUTES } from "./constants";
 import "./App.css";
+import { EmailVerificationPage } from "./pages/auth/EmailVerificationPage";
+import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
+import { ForgotPasswordPage } from "./pages/auth/ForgotPasswordPage";
 
 // Loading component for auth initialization
 const AuthLoadingFallback: React.FC = () => (
@@ -37,7 +40,7 @@ function App() {
           >
             <div className='App'>
               <Routes>
-                {/* Auth routes - both use the same AuthPage component */}
+                {/* Auth routes */}
                 <Route
                   path={ROUTES.LOGIN}
                   element={
@@ -59,6 +62,23 @@ function App() {
                       <AuthPage />
                     </ProtectedRoute>
                   }
+                />
+
+                {/* Email verification routes */}
+                <Route
+                  path={ROUTES.VERIFY_EMAIL}
+                  element={<EmailVerificationPage />}
+                />
+
+                {/* Password reset routes */}
+                <Route
+                  path={ROUTES.FORGOT_PASSWORD}
+                  element={<ForgotPasswordPage />}
+                />
+
+                <Route
+                  path={ROUTES.RESET_PASSWORD}
+                  element={<ResetPasswordPage />}
                 />
 
                 {/* Protected routes */}
@@ -140,148 +160,6 @@ function App() {
                         </div>
                       </div>
                     </ProtectedRoute>
-                  }
-                />
-
-                {/* Workflow editor routes */}
-                <Route
-                  path='/workflows/:id/edit'
-                  element={
-                    <ProtectedRoute
-                      requireAuth={true}
-                      requireOrganization={true}
-                      minRole='Member' // Require at least Member role
-                      loadingComponent={<AuthLoadingFallback />}
-                    >
-                      <div className='min-h-screen flex items-center justify-center'>
-                        <div className='text-center'>
-                          <h1 className='text-2xl font-bold text-gray-900'>
-                            Workflow Editor
-                          </h1>
-                          <p className='mt-2 text-gray-600'>
-                            Workflow editor coming soon...
-                          </p>
-                        </div>
-                      </div>
-                    </ProtectedRoute>
-                  }
-                />
-
-                <Route
-                  path='/workflows/new'
-                  element={
-                    <ProtectedRoute
-                      requireAuth={true}
-                      requireOrganization={true}
-                      minRole='Member'
-                      loadingComponent={<AuthLoadingFallback />}
-                    >
-                      <div className='min-h-screen flex items-center justify-center'>
-                        <div className='text-center'>
-                          <h1 className='text-2xl font-bold text-gray-900'>
-                            Create New Workflow
-                          </h1>
-                          <p className='mt-2 text-gray-600'>
-                            Workflow creation page coming soon...
-                          </p>
-                        </div>
-                      </div>
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Admin-only routes */}
-                <Route
-                  path='/admin/*'
-                  element={
-                    <ProtectedRoute
-                      requireAuth={true}
-                      requireOrganization={true}
-                      minRole='Admin'
-                      loadingComponent={<AuthLoadingFallback />}
-                    >
-                      <div className='min-h-screen flex items-center justify-center'>
-                        <div className='text-center'>
-                          <h1 className='text-2xl font-bold text-gray-900'>
-                            Admin Panel
-                          </h1>
-                          <p className='mt-2 text-gray-600'>
-                            Admin features coming soon...
-                          </p>
-                        </div>
-                      </div>
-                    </ProtectedRoute>
-                  }
-                />
-
-                {/* Email verification route */}
-                <Route
-                  path='/verify-email'
-                  element={
-                    <div className='min-h-screen flex items-center justify-center bg-gray-50'>
-                      <div className='max-w-md w-full bg-white rounded-lg shadow p-6'>
-                        <div className='text-center'>
-                          <div className='mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100'>
-                            <svg
-                              className='h-6 w-6 text-blue-600'
-                              fill='none'
-                              stroke='currentColor'
-                              viewBox='0 0 24 24'
-                            >
-                              <path
-                                strokeLinecap='round'
-                                strokeLinejoin='round'
-                                strokeWidth={2}
-                                d='M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'
-                              />
-                            </svg>
-                          </div>
-                          <h3 className='mt-2 text-lg font-medium text-gray-900'>
-                            Email Verification
-                          </h3>
-                          <p className='mt-1 text-sm text-gray-500'>
-                            Email verification functionality coming soon...
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  }
-                />
-
-                {/* Password reset routes */}
-                <Route
-                  path='/forgot-password'
-                  element={
-                    <div className='min-h-screen flex items-center justify-center bg-gray-50'>
-                      <div className='max-w-md w-full bg-white rounded-lg shadow p-6'>
-                        <div className='text-center'>
-                          <h3 className='text-lg font-medium text-gray-900'>
-                            Forgot Password
-                          </h3>
-                          <p className='mt-1 text-sm text-gray-500'>
-                            Password reset functionality coming soon...
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  }
-                />
-
-                <Route
-                  path='/reset-password'
-                  element={
-                    <div className='min-h-screen flex items-center justify-center bg-gray-50'>
-                      <div className='max-w-md w-full bg-white rounded-lg shadow p-6'>
-                        <div className='text-center'>
-                          <h3 className='text-lg font-medium text-gray-900'>
-                            Reset Password
-                          </h3>
-                          <p className='mt-1 text-sm text-gray-500'>
-                            Password reset functionality coming soon...
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   }
                 />
 

@@ -18,6 +18,10 @@ interface ResetPasswordRequest {
   password: string;
 }
 
+interface VerifyEmailRequest {
+  token: string;
+}
+
 interface ChangePasswordRequest {
   currentPassword: string;
   newPassword: string;
@@ -97,6 +101,32 @@ export const authService = {
     }
   },
 
+  async verifyEmail(token: string): Promise<ApiResponse> {
+    console.log("🔧 AuthService: Calling verify email...");
+    try {
+      const response = await apiClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, {
+        token,
+      });
+      console.log("✅ AuthService: Email verification successful");
+      return response;
+    } catch (error) {
+      console.log("❌ AuthService: Email verification error:", error);
+      throw error;
+    }
+  },
+
+  async sendEmailVerification(): Promise<ApiResponse> {
+    console.log("🔧 AuthService: Calling send email verification...");
+    try {
+      const response = await apiClient.post("/auth/send-verification");
+      console.log("✅ AuthService: Email verification sent");
+      return response;
+    } catch (error) {
+      console.log("❌ AuthService: Send email verification error:", error);
+      throw error;
+    }
+  },
+
   async forgotPassword(data: ForgotPasswordRequest): Promise<ApiResponse> {
     console.log("🔧 AuthService: Calling forgot password...");
     try {
@@ -127,16 +157,33 @@ export const authService = {
     }
   },
 
-  async verifyEmail(token: string): Promise<ApiResponse> {
-    console.log("🔧 AuthService: Calling verify email...");
+  async validateResetToken(
+    token: string
+  ): Promise<ApiResponse<{ isValid: boolean }>> {
+    console.log("🔧 AuthService: Validating reset token...");
     try {
-      const response = await apiClient.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, {
-        token,
-      });
-      console.log("✅ AuthService: Email verification successful");
+      const response = await apiClient.get<{ isValid: boolean }>(
+        `/auth/reset-password/validate?token=${encodeURIComponent(token)}`
+      );
+      console.log("✅ AuthService: Reset token validation successful");
       return response;
     } catch (error) {
-      console.log("❌ AuthService: Email verification error:", error);
+      console.log("❌ AuthService: Reset token validation error:", error);
+      throw error;
+    }
+  },
+
+  async validateEmailToken(
+    token: string
+  ): Promise<ApiResponse<{ isValid: boolean }>> {
+    console.log("🔧 AuthService: Validating email token...");
+    try {
+      const response = await apiClient.get<{ isValid: boolean }>(
+        `/auth/verify-email/validate?token=${encodeURIComponent(token)}`
+      );
+      return response;
+    } catch (error) {
+      console.log("❌ AuthService: Email token validation error:", error);
       throw error;
     }
   },
@@ -187,18 +234,6 @@ export const authService = {
     }
   },
 
-  async sendEmailVerification(): Promise<ApiResponse> {
-    console.log("🔧 AuthService: Calling send email verification...");
-    try {
-      const response = await apiClient.post("/auth/send-verification");
-      console.log("✅ AuthService: Email verification sent");
-      return response;
-    } catch (error) {
-      console.log("❌ AuthService: Send email verification error:", error);
-      throw error;
-    }
-  },
-
   // Additional utility methods
   async checkEmailAvailability(
     email: string
@@ -211,21 +246,6 @@ export const authService = {
       return response;
     } catch (error) {
       console.log("❌ AuthService: Email availability check error:", error);
-      throw error;
-    }
-  },
-
-  async validateResetToken(
-    token: string
-  ): Promise<ApiResponse<{ valid: boolean }>> {
-    console.log("🔧 AuthService: Validating reset token...");
-    try {
-      const response = await apiClient.get<{ valid: boolean }>(
-        `/auth/validate-reset-token?token=${encodeURIComponent(token)}`
-      );
-      return response;
-    } catch (error) {
-      console.log("❌ AuthService: Reset token validation error:", error);
       throw error;
     }
   },

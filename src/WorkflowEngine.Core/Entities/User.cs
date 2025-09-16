@@ -43,4 +43,6 @@ public class User
     public virtual ICollection<Workflow> CreatedWorkflows { get; set; } = new List<Workflow>();
     public virtual ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public virtual ICollection<OrganizationInvite> SentInvites { get; set; } = new List<OrganizationInvite>();
+    public List<EmailVerificationToken> EmailVerificationTokens { get; set; } = new();
+    public List<PasswordResetToken> PasswordResetTokens { get; set; } = new();
 }

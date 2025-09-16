@@ -1,10 +1,13 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using WorkflowEngine.Application.DTOs.Auth;
 using WorkflowEngine.Core.Entities;
 using WorkflowEngine.Infrastructure.Data;
+using WorkflowEngine.Infrastructure.Services;
 using WorkflowEngine.Infrastructure.Services.Auth;
+using WorkflowEngine.Infrastructure.Services.Email;
 
 namespace WorkflowEngine.UnitTests.Services;
 
@@ -14,6 +17,9 @@ public class AuthServiceTests : IDisposable
     private readonly AuthService _authService;
     private readonly JwtService _jwtService;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly SmtpEmailService _emailService;
+    private readonly TokenService _tokenService;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthServiceTests()
     {
@@ -39,7 +45,7 @@ public class AuthServiceTests : IDisposable
             .Build();
 
         _jwtService = new JwtService(configuration, _context);
-        _authService = new AuthService(_context, _jwtService, _passwordHasher);
+        _authService = new AuthService(_context, _jwtService, _passwordHasher, _emailService, _tokenService, _logger);
     }
 
     [Fact]

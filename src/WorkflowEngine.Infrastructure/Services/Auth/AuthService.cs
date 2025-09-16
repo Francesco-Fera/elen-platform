@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using WorkflowEngine.Application.DTOs.Auth;
 using WorkflowEngine.Application.Interfaces.Auth;
+using WorkflowEngine.Application.Interfaces.Services;
 using WorkflowEngine.Application.Services.Auth;
 using WorkflowEngine.Core.Entities;
 using WorkflowEngine.Infrastructure.Data;
@@ -13,15 +15,24 @@ public class AuthService : IAuthService
     private readonly WorkflowEngineDbContext _context;
     private readonly IJwtService _jwtService;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly IEmailService _emailService;
+    private readonly ITokenService _tokenService;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         WorkflowEngineDbContext context,
         IJwtService jwtService,
-        IPasswordHasher<User> passwordHasher)
+        IPasswordHasher<User> passwordHasher,
+        IEmailService emailService,
+        ITokenService tokenService,
+        ILogger<AuthService> logger)
     {
         _context = context;
         _jwtService = jwtService;
         _passwordHasher = passwordHasher;
+        _emailService = emailService;
+        _tokenService = tokenService;
+        _logger = logger;
     }
 
     public async Task<AuthResult> LoginAsync(LoginRequest request)
@@ -167,28 +178,180 @@ public class AuthService : IAuthService
 
     public async Task<bool> SendEmailVerificationAsync(string email)
     {
-        // TODO: Implement email verification logic
-        // Generate token, save to database, send email
-        return await Task.FromResult(true);
+        try
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email);
+
+            if (user == null)
+            {
+                _logger.LogWarning("Email verification requested for non-existent user: {Email}", email);
+                return false;
+            }
+
+            if (user.IsEmailVerified)
+            {
+                _logger.LogInformation("Email verification requested for already verified user: {Email}", email);
+                return true;
+            }
+
+            var token = await _tokenService.GenerateEmailVerificationTokenAsync(user.Id);
+
+            var success = await _emailService.SendEmailVerificationAsync(user.Email, user.FirstName, token);
+
+            if (success)
+            {
+                _logger.LogInformation("Email verification sent successfully to: {Email}", email);
+            }
+            else
+            {
+                _logger.LogError("Failed to send email verification to: {Email}", email);
+            }
+
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending email verification to: {Email}", email);
+            return false;
+        }
     }
 
     public async Task<bool> VerifyEmailAsync(string token)
     {
-        // TODO: Implement email verification logic
-        return await Task.FromResult(true);
+        try
+        {
+            var success = await _tokenService.ValidateEmailVerificationTokenAsync(token);
+
+            if (success)
+            {
+                _logger.LogInformation("Email verification successful for token");
+
+                // Send welcome email after successful verification
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var verificationToken = await _context.EmailVerificationTokens
+                            .Include(t => t.User)
+                            .ThenInclude(u => u.CurrentOrganization)
+                            .FirstOrDefaultAsync(t => t.Token == token);
+
+                        if (verificationToken?.User != null)
+                        {
+                            await _emailService.SendWelcomeEmailAsync(
+                                verificationToken.User.Email,
+                                verificationToken.User.FirstName,
+                                verificationToken.User.CurrentOrganization?.Name ?? "Your Organization"
+                            );
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to send welcome email after verification");
+                    }
+                });
+            }
+            else
+            {
+                _logger.LogWarning("Invalid email verification token provided");
+            }
+
+            return success;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during email verification");
+            return false;
+        }
     }
 
     public async Task<bool> SendPasswordResetAsync(string email)
     {
-        // TODO: Implement password reset logic
-        return await Task.FromResult(true);
+        try
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Email == email && u.IsActive);
+
+            if (user == null)
+            {
+                _logger.LogWarning("Password reset requested for non-existent or inactive user: {Email}", email);
+                // Always return true to prevent email enumeration
+                return true;
+            }
+
+            var token = await _tokenService.GeneratePasswordResetTokenAsync(
+                user.Id,
+                "unknown", // IP address should be passed from controller
+                "unknown"  // User agent should be passed from controller
+            );
+
+            var success = await _emailService.SendPasswordResetAsync(user.Email, user.FirstName, token);
+
+            if (success)
+            {
+                _logger.LogInformation("Password reset email sent to: {Email}", email);
+            }
+            else
+            {
+                _logger.LogError("Failed to send password reset email to: {Email}", email);
+            }
+
+            // Always return true to prevent email enumeration
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending password reset to: {Email}", email);
+            return true; // Still return true to prevent email enumeration
+        }
     }
 
     public async Task<bool> ResetPasswordAsync(string token, string newPassword)
     {
-        // TODO: Implement password reset logic
-        return await Task.FromResult(true);
+        try
+        {
+            var userId = await _tokenService.GetUserIdFromPasswordResetTokenAsync(token);
+            if (userId == null)
+            {
+                _logger.LogWarning("Invalid password reset token provided");
+                return false;
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                _logger.LogError("User not found for password reset: {UserId}", userId);
+                return false;
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(user, newPassword);
+
+            // Invalidate all existing refresh tokens for security
+            var existingTokens = await _context.RefreshTokens
+                .Where(rt => rt.UserId == userId && !rt.IsRevoked)
+                .ToListAsync();
+
+            foreach (var rt in existingTokens)
+            {
+                rt.IsRevoked = true;
+                rt.RevokedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Password reset successful for user: {UserId}", userId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during password reset");
+            return false;
+        }
     }
+
 
     private string GenerateSlug(string input)
     {

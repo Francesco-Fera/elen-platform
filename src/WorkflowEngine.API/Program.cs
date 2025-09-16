@@ -9,13 +9,16 @@ using System.Text;
 using WorkflowEngine.API.Middleware;
 using WorkflowEngine.Application.Constants;
 using WorkflowEngine.Application.Interfaces.Auth;
+using WorkflowEngine.Application.Interfaces.Services;
 using WorkflowEngine.Application.Services.Auth;
 using WorkflowEngine.Core.Entities;
 using WorkflowEngine.Core.Enums;
 using WorkflowEngine.Infrastructure.Authorization.Handlers;
 using WorkflowEngine.Infrastructure.Authorization.Requirements;
 using WorkflowEngine.Infrastructure.Data;
+using WorkflowEngine.Infrastructure.Services;
 using WorkflowEngine.Infrastructure.Services.Auth;
+using WorkflowEngine.Infrastructure.Services.Email;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -129,6 +132,20 @@ builder.Services.AddScoped<IOrganizationService, OrganizationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 
+// Email Services
+var emailProvider = builder.Configuration["Email:Provider"];
+if (emailProvider?.ToLower() == "sendgrid")
+{
+    builder.Services.AddScoped<IEmailService, SendGridEmailService>();
+}
+else
+{
+    builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+}
+
+builder.Services.AddScoped<ITokenService, TokenService>();
+
+
 // Configure CORS
 builder.Services.AddCors(options =>
 {
@@ -140,6 +157,9 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+// Background Services for token cleanup
+builder.Services.AddHostedService<TokenCleanupService>();
 
 // Configure Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();

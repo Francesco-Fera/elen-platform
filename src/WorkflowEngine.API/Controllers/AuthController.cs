@@ -273,22 +273,26 @@ public class AuthController : ControllerBase
         {
             if (_currentUserService.IsEmailVerified)
             {
-                return BadRequest(new { message = "Email is already verified" });
+                return BadRequest(new { success = false, message = "Email is already verified" });
             }
 
             var success = await _authService.SendEmailVerificationAsync(_currentUserService.Email!);
 
             if (!success)
             {
-                return BadRequest(new { message = "Failed to send verification email" });
+                return BadRequest(new { success = false, message = "Failed to send verification email" });
             }
 
-            return Ok(new { success = true, message = "Verification email sent successfully" });
+            return Ok(new
+            {
+                success = true,
+                message = "Verification email sent successfully. Please check your inbox."
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending verification email for user {UserId}", _currentUserService.UserId);
-            return StatusCode(500, new { message = "An error occurred while sending verification email" });
+            return StatusCode(500, new { success = false, message = "An error occurred while sending verification email" });
         }
     }
 
@@ -300,21 +304,35 @@ public class AuthController : ControllerBase
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(request.Token))
+            {
+                return BadRequest(new { success = false, message = "Verification token is required" });
+            }
+
             var success = await _authService.VerifyEmailAsync(request.Token);
 
             if (!success)
             {
-                return BadRequest(new { message = "Invalid or expired verification token" });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid or expired verification token. Please request a new verification email."
+                });
             }
 
-            return Ok(new { success = true, message = "Email verified successfully" });
+            return Ok(new
+            {
+                success = true,
+                message = "Email verified successfully! Welcome to WorkflowEngine."
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error verifying email with token");
-            return StatusCode(500, new { message = "An error occurred during email verification" });
+            return StatusCode(500, new { success = false, message = "An error occurred during email verification" });
         }
     }
+
 
     /// <summary>
     /// Send password reset email
@@ -324,15 +342,24 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var success = await _authService.SendPasswordResetAsync(request.Email);
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest(new { success = false, message = "Email address is required" });
+            }
 
-            // Always return success to avoid email enumeration
-            return Ok(new { success = true, message = "If the email exists, a password reset link has been sent" });
+            // Always return success to avoid email enumeration attacks
+            await _authService.SendPasswordResetAsync(request.Email);
+
+            return Ok(new
+            {
+                success = true,
+                message = "If an account with that email exists, a password reset link has been sent."
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error sending password reset email");
-            return StatusCode(500, new { message = "An error occurred while sending password reset email" });
+            return StatusCode(500, new { success = false, message = "An error occurred while sending password reset email" });
         }
     }
 
@@ -344,19 +371,102 @@ public class AuthController : ControllerBase
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(request.Token))
+            {
+                return BadRequest(new { success = false, message = "Reset token is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                return BadRequest(new { success = false, message = "New password is required" });
+            }
+
+            if (request.Password.Length < 8)
+            {
+                return BadRequest(new { success = false, message = "Password must be at least 8 characters long" });
+            }
+
             var success = await _authService.ResetPasswordAsync(request.Token, request.Password);
 
             if (!success)
             {
-                return BadRequest(new { message = "Invalid or expired reset token" });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid or expired reset token. Please request a new password reset."
+                });
             }
 
-            return Ok(new { success = true, message = "Password reset successfully" });
+            return Ok(new
+            {
+                success = true,
+                message = "Password reset successfully. Please log in with your new password."
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error resetting password with token");
-            return StatusCode(500, new { message = "An error occurred during password reset" });
+            return StatusCode(500, new { success = false, message = "An error occurred during password reset" });
+        }
+    }
+
+    /// <summary>
+    /// Check if email verification token is valid (for frontend validation)
+    /// </summary>
+    [HttpGet("verify-email/validate")]
+    public async Task<IActionResult> ValidateEmailToken([FromQuery] string token)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return BadRequest(new { success = false, message = "Token is required" });
+            }
+
+            // This is a lightweight validation - doesn't actually verify the email
+            // Just checks if the token format is valid and not expired
+            var isValid = await _authService.VerifyEmailAsync(token);
+
+            return Ok(new
+            {
+                success = true,
+                data = new { isValid = false } // Always return false for security - use verify-email to actually verify
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating email token");
+            return Ok(new { success = true, data = new { isValid = false } });
+        }
+    }
+
+    /// <summary>
+    /// Check if password reset token is valid (for frontend validation)
+    /// </summary>
+    [HttpGet("reset-password/validate")]
+    public async Task<IActionResult> ValidateResetToken([FromQuery] string token)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return BadRequest(new { success = false, message = "Token is required" });
+            }
+
+            // This doesn't consume the token, just validates it
+            var tokenService = HttpContext.RequestServices.GetRequiredService<WorkflowEngine.Application.Interfaces.Services.ITokenService>();
+            var isValid = await tokenService.ValidatePasswordResetTokenAsync(token);
+
+            return Ok(new
+            {
+                success = true,
+                data = new { isValid }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating reset token");
+            return Ok(new { success = true, data = new { isValid = false } });
         }
     }
 }

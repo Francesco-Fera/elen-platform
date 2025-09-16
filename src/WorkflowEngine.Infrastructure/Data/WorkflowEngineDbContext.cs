@@ -19,6 +19,8 @@ public class WorkflowEngineDbContext : DbContext
     public DbSet<OrganizationMember> OrganizationMembers { get; set; } = null!;
     public DbSet<OrganizationInvite> OrganizationInvites { get; set; } = null!;
     public DbSet<WorkflowPermission> WorkflowPermissions { get; set; } = null!;
+    public DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; } = null!;
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -69,6 +71,41 @@ public class WorkflowEngineDbContext : DbContext
             entity.HasIndex(e => e.UserId);
             entity.HasIndex(e => e.TokenHash);
             entity.HasIndex(e => e.ExpiresAt);
+        });
+
+        modelBuilder.Entity<EmailVerificationToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Token).IsRequired();
+
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.EmailVerificationTokens)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ExpiresAt);
+            entity.HasIndex(e => new { e.UserId, e.IsUsed });
+        });
+
+        // Password Reset Token configuration  
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Token).IsRequired();
+            entity.Property(e => e.IpAddress).HasMaxLength(45); // IPv6 support
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+
+            entity.HasOne(e => e.User)
+                  .WithMany(u => u.PasswordResetTokens)
+                  .HasForeignKey(e => e.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.ExpiresAt);
+            entity.HasIndex(e => new { e.UserId, e.IsUsed });
         });
     }
 

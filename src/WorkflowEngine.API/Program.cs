@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using System.Security.Claims;
 using System.Text;
 using WorkflowEngine.API.Middleware;
 using WorkflowEngine.Application.Constants;
@@ -76,6 +77,40 @@ builder.Services.AddAuthentication(options =>
             if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
             {
                 context.Token = accessToken;
+            }
+
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            if (context.Principal?.Identity is ClaimsIdentity identity)
+            {
+                var claimsToAdd = new List<Claim>();
+                var claimsToRemove = new List<Claim>();
+
+                foreach (var claim in identity.Claims.ToList())
+                {
+                    switch (claim.Type)
+                    {
+                        case ClaimTypes.NameIdentifier:
+                            claimsToAdd.Add(new Claim("user_id", claim.Value));
+                            break;
+                        case ClaimTypes.Email:
+                            claimsToAdd.Add(new Claim("email", claim.Value));
+                            break;
+                        case ClaimTypes.GivenName:
+                            claimsToAdd.Add(new Claim("first_name", claim.Value));
+                            break;
+                        case ClaimTypes.Surname:
+                            claimsToAdd.Add(new Claim("last_name", claim.Value));
+                            break;
+                        case ClaimTypes.Name:
+                            claimsToAdd.Add(new Claim("full_name", claim.Value));
+                            break;
+                    }
+                }
+
+                identity.AddClaims(claimsToAdd);
             }
 
             return Task.CompletedTask;

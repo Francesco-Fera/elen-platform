@@ -1,10 +1,9 @@
-﻿namespace WorkflowEngine.Core.Enums
+﻿namespace WorkflowEngine.Core.Enums;
+
+public enum ExecutionTrigger
 {
-    public enum ExecutionTrigger
-    {
-        Manual = 0,
-        Webhook = 1,
-        Schedule = 2,
-        Event = 3
-    }
+    Manual = 0,
+    Webhook = 1,
+    Schedule = 2,
+    Event = 3
 }

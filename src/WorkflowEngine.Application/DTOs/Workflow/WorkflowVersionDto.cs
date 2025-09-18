@@ -9,6 +9,7 @@ public class WorkflowVersionDto
     public string? Description { get; set; }
     public string? VersionNote { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
     public Guid CreatedBy { get; set; }
     public string? CreatorName { get; set; }
 

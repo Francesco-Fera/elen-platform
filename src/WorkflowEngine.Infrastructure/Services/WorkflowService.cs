@@ -72,10 +72,10 @@ public class WorkflowService : IWorkflowService
             query = query.Where(w => w.CreatedAt <= request.CreatedBefore.Value);
 
         if (request.ModifiedAfter.HasValue)
-            query = query.Where(w => w.UpdatedAt >= request.ModifiedAfter.Value); // @TODO Add in entity
+            query = query.Where(w => w.LastModified >= request.ModifiedAfter.Value);
 
         if (request.ModifiedBefore.HasValue)
-            query = query.Where(w => w.UpdatedAt <= request.ModifiedBefore.Value); // @TODO Add in entity
+            query = query.Where(w => w.LastModified <= request.ModifiedBefore.Value);
 
 
         // Apply sorting
@@ -97,7 +97,7 @@ public class WorkflowService : IWorkflowService
                 Visibility = w.Visibility,
                 IsTemplate = w.IsTemplate,
                 CreatedAt = w.CreatedAt,
-                LastModified = w.UpdatedAt,
+                LastModified = w.LastModified,
                 CreatorName = w.Creator != null ? $"{w.Creator.FirstName} {w.Creator.LastName}".Trim() : null,
                 NodeCount = w.NodesJson != null ? JsonSerializer.Deserialize<List<WorkflowNodeDto>>(w.NodesJson)!.Count : 0,
                 ExecutionCount = w.Executions.Count(),
@@ -150,7 +150,7 @@ public class WorkflowService : IWorkflowService
             IsTemplate = workflow.IsTemplate,
             Version = workflow.Version,
             CreatedAt = workflow.CreatedAt,
-            LastModified = workflow.CreatedAt, // @TODO fix in entity
+            LastModified = workflow.LastModified,
             CreatedBy = workflow.CreatedBy,
             CreatorName = workflow.Creator != null ? $"{workflow.Creator.FirstName} {workflow.Creator.LastName}".Trim() : null,
             CreatorEmail = workflow.Creator?.Email,
@@ -289,7 +289,7 @@ public class WorkflowService : IWorkflowService
             Version = 1,
             CreatedBy = userId.Value,
             CreatedAt = DateTime.UtcNow,
-            // UpdatedAt = DateTime.UtcNow, TODO to be fixed in entity
+            LastModified = DateTime.UtcNow,
             OrganizationId = organizationId.Value,
             NodesJson = sourceWorkflow.NodesJson,
             ConnectionsJson = sourceWorkflow.ConnectionsJson,
@@ -326,7 +326,7 @@ public class WorkflowService : IWorkflowService
         }
 
         workflow.Status = status;
-        // workflow.UpdatedAt = DateTime.UtcNow; @TODO to be fixed in entity
+        workflow.LastModified = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
 
@@ -650,7 +650,7 @@ public class WorkflowService : IWorkflowService
                 Visibility = w.Visibility,
                 IsTemplate = w.IsTemplate,
                 CreatedAt = w.CreatedAt,
-                // LastModified = w.UpdatedAt, TODO
+                LastModified = w.LastModified,
                 CreatorName = w.Creator != null ? $"{w.Creator.FirstName} {w.Creator.LastName}".Trim() : null,
                 NodeCount = w.NodesJson != null ? JsonSerializer.Deserialize<List<WorkflowNodeDto>>(w.NodesJson)!.Count : 0,
                 ExecutionCount = 0, // Templates don't have executions
@@ -699,7 +699,7 @@ public class WorkflowService : IWorkflowService
             Version = 1,
             CreatedBy = userId.Value,
             CreatedAt = DateTime.UtcNow,
-            // UpdatedAt = DateTime.UtcNow, TODO to be fixed in entity
+            LastModified = DateTime.UtcNow,
             OrganizationId = organizationId.Value,
             NodesJson = template.NodesJson,
             ConnectionsJson = template.ConnectionsJson,
@@ -736,7 +736,7 @@ public class WorkflowService : IWorkflowService
                 Name = workflow.Name,
                 Description = workflow.Description,
                 CreatedAt = workflow.CreatedAt,
-                // CreatedAt = workflow.UpdatedAt ?? workflow.CreatedAt, TODO
+                UpdatedAt = workflow.LastModified ?? workflow.CreatedAt,
                 CreatedBy = workflow.CreatedBy,
                 Nodes = workflow.NodesJson != null ? JsonSerializer.Deserialize<List<WorkflowNodeDto>>(workflow.NodesJson)! : new(),
                 Connections = workflow.ConnectionsJson != null ? JsonSerializer.Deserialize<List<NodeConnectionDto>>(workflow.ConnectionsJson)! : new(),
@@ -764,15 +764,14 @@ public class WorkflowService : IWorkflowService
     private static IQueryable<Workflow> ApplySorting(IQueryable<Workflow> query, string sortBy, string sortOrder)
     {
         var isAscending = sortOrder.ToLower() == "asc";
-        // TODO: Fix entity
         return sortBy.ToLower() switch
         {
             "name" => isAscending ? query.OrderBy(w => w.Name) : query.OrderByDescending(w => w.Name),
             "createdat" => isAscending ? query.OrderBy(w => w.CreatedAt) : query.OrderByDescending(w => w.CreatedAt),
-            "updatedat" => isAscending ? query.OrderBy(w => w.UpdatedAt) : query.OrderByDescending(w => w.UpdatedAt),
-            "lastmodified" => isAscending ? query.OrderBy(w => w.UpdatedAt) : query.OrderByDescending(w => w.UpdatedAt),
+            "updatedat" => isAscending ? query.OrderBy(w => w.LastModified) : query.OrderByDescending(w => w.LastModified),
+            "lastmodified" => isAscending ? query.OrderBy(w => w.LastModified) : query.OrderByDescending(w => w.LastModified),
             "status" => isAscending ? query.OrderBy(w => w.Status) : query.OrderByDescending(w => w.Status),
-            _ => query.OrderByDescending(w => w.UpdatedAt ?? w.CreatedAt)
+            _ => query.OrderByDescending(w => w.LastModified ?? w.CreatedAt)
         };
     }
 

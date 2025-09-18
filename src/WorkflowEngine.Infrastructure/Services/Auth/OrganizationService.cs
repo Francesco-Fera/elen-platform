@@ -105,7 +105,7 @@ public class OrganizationService : IOrganizationService
         await _context.SaveChangesAsync();
 
         // TODO: Send email invitation
-        // await _emailService.SendInvitationEmailAsync(invite);
+        //await _emailService.SendInvitationEmailAsync(invite);
         return true;
     }
 

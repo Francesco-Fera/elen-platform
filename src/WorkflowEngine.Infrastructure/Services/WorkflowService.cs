@@ -85,26 +85,30 @@ public class WorkflowService : IWorkflowService
         var totalCount = await query.CountAsync();
 
         // Apply pagination
-        var workflows = await query
+        var entities = await query
             .Skip((request.Page - 1) * request.Limit)
             .Take(request.Limit)
-            .Select(w => new WorkflowSummaryDto
-            {
-                Id = w.Id,
-                Name = w.Name,
-                Description = w.Description,
-                Status = w.Status,
-                Visibility = w.Visibility,
-                IsTemplate = w.IsTemplate,
-                CreatedAt = w.CreatedAt,
-                LastModified = w.LastModified,
-                CreatorName = w.Creator != null ? $"{w.Creator.FirstName} {w.Creator.LastName}".Trim() : null,
-                NodeCount = w.NodesJson != null ? JsonSerializer.Deserialize<List<WorkflowNodeDto>>(w.NodesJson)!.Count : 0,
-                ExecutionCount = w.Executions.Count(),
-                LastExecutedAt = w.Executions.OrderByDescending(e => e.StartedAt).FirstOrDefault()!.StartedAt,
-                LastExecutionStatus = w.Executions.OrderByDescending(e => e.StartedAt).FirstOrDefault()!.Status
-            })
             .ToListAsync();
+
+        var workflows = entities.Select(w => new WorkflowSummaryDto
+        {
+            Id = w.Id,
+            Name = w.Name,
+            Description = w.Description,
+            Status = w.Status,
+            Visibility = w.Visibility,
+            IsTemplate = w.IsTemplate,
+            CreatedAt = w.CreatedAt,
+            LastModified = w.LastModified,
+            CreatorName = w.Creator != null ? $"{w.Creator.FirstName} {w.Creator.LastName}".Trim() : null,
+            NodeCount = w.NodesJson != null
+                ? JsonSerializer.Deserialize<List<WorkflowNodeDto>>(w.NodesJson)!.Count
+                : 0,
+            ExecutionCount = w.Executions.Count(),
+            LastExecutedAt = w.Executions.OrderByDescending(e => e.StartedAt).FirstOrDefault()?.StartedAt,
+            LastExecutionStatus = w.Executions.OrderByDescending(e => e.StartedAt).FirstOrDefault()?.Status
+        }).ToList();
+
 
         return new WorkflowListResponse
         {
@@ -638,9 +642,13 @@ public class WorkflowService : IWorkflowService
 
         var totalCount = await query.CountAsync();
 
-        var templates = await query
+        var templateEntities = await query
             .Skip((request.Page - 1) * request.Limit)
             .Take(request.Limit)
+            .ToListAsync();
+
+        // Poi fai la proiezione in memoria
+        var templates = templateEntities
             .Select(w => new WorkflowSummaryDto
             {
                 Id = w.Id,
@@ -652,12 +660,15 @@ public class WorkflowService : IWorkflowService
                 CreatedAt = w.CreatedAt,
                 LastModified = w.LastModified,
                 CreatorName = w.Creator != null ? $"{w.Creator.FirstName} {w.Creator.LastName}".Trim() : null,
-                NodeCount = w.NodesJson != null ? JsonSerializer.Deserialize<List<WorkflowNodeDto>>(w.NodesJson)!.Count : 0,
+                NodeCount = w.NodesJson != null
+                    ? JsonSerializer.Deserialize<List<WorkflowNodeDto>>(w.NodesJson)!.Count
+                    : 0,
                 ExecutionCount = 0, // Templates don't have executions
                 LastExecutedAt = null,
                 LastExecutionStatus = null
             })
-            .ToListAsync();
+            .ToList();
+
 
         return new WorkflowListResponse
         {

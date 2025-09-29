@@ -244,34 +244,11 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
-// Test endpoints
-app.MapGet("/test-db", async (WorkflowEngineDbContext context) =>
+using (var scope = app.Services.CreateScope())
 {
-    try
-    {
-        await context.Database.CanConnectAsync();
-        return Results.Ok("Database connection successful!");
-    }
-    catch (Exception ex)
-    {
-        return Results.Problem($"Database connection failed: {ex.Message}");
-    }
-});
-
-app.MapGet("/test", () => "API is working!");
-
-// Test multi-tenant endpoint
-app.MapGet("/test-auth", (ICurrentUserService currentUser) =>
-{
-    return Results.Ok(new
-    {
-        IsAuthenticated = currentUser.UserId != null,
-        UserId = currentUser.UserId,
-        OrganizationId = currentUser.OrganizationId,
-        Email = currentUser.Email,
-        Role = currentUser.OrganizationRole?.ToString()
-    });
-}).RequireAuthorization();
+    var context = scope.ServiceProvider.GetRequiredService<WorkflowEngineDbContext>();
+    await DbInitializer.SeedCredentialTypesAsync(context);
+}
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

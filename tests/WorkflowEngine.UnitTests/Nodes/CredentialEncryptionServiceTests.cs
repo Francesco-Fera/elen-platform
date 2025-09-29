@@ -57,7 +57,7 @@ public class CredentialEncryptionServiceTests
     [Fact]
     public async Task DecryptAsync_InvalidData_ThrowsException()
     {
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        await Assert.ThrowsAsync<FormatException>(
             async () => await _service.DecryptAsync("invalid-base64"));
     }
 }

@@ -1,6 +1,7 @@
-﻿namespace WorkflowEngine.Nodes.Models;
+﻿using Microsoft.Extensions.DependencyInjection;
 
-public class NodeExecutionContext
+namespace WorkflowEngine.Nodes.Models;
+public record NodeExecutionContext
 {
     public required Guid ExecutionId { get; init; }
     public required string NodeId { get; init; }

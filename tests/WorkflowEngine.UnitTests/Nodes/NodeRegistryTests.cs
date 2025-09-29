@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using WorkflowEngine.Nodes.Expressions;
+using WorkflowEngine.Nodes.Interfaces;
 using WorkflowEngine.Nodes.Registry;
 
 namespace WorkflowEngine.UnitTests.Nodes;
@@ -12,6 +14,11 @@ public class NodeRegistryTests
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddHttpClient();
+
+        services.AddSingleton<IExpressionEvaluator, ExpressionEvaluator>();
+        services.AddScoped<ICredentialService, FakeCredentialService>();
+        services.AddScoped<ICredentialEncryptionService, FakeCredentialEncryptionService>();
+
         var serviceProvider = services.BuildServiceProvider();
 
         _registry = new NodeRegistry(serviceProvider);
@@ -63,5 +70,47 @@ public class NodeRegistryTests
     public void IsRegistered_InvalidType_ReturnsFalse()
     {
         Assert.False(_registry.IsRegistered("invalid_type"));
+    }
+}
+
+public class FakeCredentialService : ICredentialService
+{
+    public Task<Dictionary<string, string>> GetCredentialDataAsync(int credentialId, Guid userId)
+    {
+        return Task.FromResult(new Dictionary<string, string>
+        {
+            ["username"] = "test",
+            ["password"] = "test",
+            ["token"] = "test-token",
+            ["api_key"] = "test-key"
+        });
+    }
+
+    public Task<T> GetCredentialDataAsync<T>(int credentialId, Guid userId) where T : class
+    {
+        var dict = new Dictionary<string, string>
+        {
+            ["username"] = "test",
+            ["password"] = "test"
+        };
+        return Task.FromResult((T)(object)dict);
+    }
+
+    public Task<bool> ValidateCredentialAsync(int credentialId, Guid userId)
+    {
+        return Task.FromResult(true);
+    }
+}
+
+public class FakeCredentialEncryptionService : ICredentialEncryptionService
+{
+    public Task<string> EncryptAsync(string data)
+    {
+        return Task.FromResult(Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(data)));
+    }
+
+    public Task<string> DecryptAsync(string encryptedData)
+    {
+        return Task.FromResult(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encryptedData)));
     }
 }

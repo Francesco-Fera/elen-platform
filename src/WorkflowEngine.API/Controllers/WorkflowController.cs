@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using WorkflowEngine.Application.Constants;
 using WorkflowEngine.Application.DTOs.Workflow;
 using WorkflowEngine.Application.Interfaces.Auth;
+using WorkflowEngine.Application.Interfaces.Workflow;
 
 namespace WorkflowEngine.API.Controllers;
 
@@ -70,7 +71,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             return Ok(new
@@ -135,7 +136,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             var workflow = await _workflowService.UpdateWorkflowAsync(id, request);
@@ -175,7 +176,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             var success = await _workflowService.DeleteWorkflowAsync(id);
@@ -210,7 +211,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             var duplicatedWorkflow = await _workflowService.DuplicateWorkflowAsync(id, request);
@@ -248,7 +249,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             var workflow = await _workflowService.UpdateWorkflowStatusAsync(id, request.Status);
@@ -288,7 +289,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             var executions = await _workflowService.GetWorkflowExecutionsAsync(id, request);
@@ -319,7 +320,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             var stats = await _workflowService.GetWorkflowStatisticsAsync(id);
@@ -355,7 +356,7 @@ public class WorkflowController : ControllerBase
             var canAccess = await _currentUserService.CanAccessWorkflowAsync(id);
             if (!canAccess)
             {
-                return Forbid(new { message = "Access denied to this workflow" });
+                return StatusCode(403, new { success = false, message = "Access denied to this workflow" });
             }
 
             var validationResult = await _workflowService.ValidateWorkflowAsync(id);

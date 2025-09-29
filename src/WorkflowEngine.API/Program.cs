@@ -20,6 +20,7 @@ using WorkflowEngine.Infrastructure.Data;
 using WorkflowEngine.Infrastructure.Services;
 using WorkflowEngine.Infrastructure.Services.Auth;
 using WorkflowEngine.Infrastructure.Services.Email;
+using WorkflowEngine.Nodes.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -151,6 +152,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AuthorizationPolicies.EmailVerified, policy =>
         policy.RequireClaim("email_verified", "true"));
 });
+
+builder.Services.AddNodeSystem();
 
 // Register Authorization Handlers
 builder.Services.AddScoped<IAuthorizationHandler, OrganizationMemberHandler>();

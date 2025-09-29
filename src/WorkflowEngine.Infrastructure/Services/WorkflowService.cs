@@ -165,7 +165,9 @@ public class WorkflowService : IWorkflowService
             Settings = workflow.SettingsJson != null ? JsonSerializer.Deserialize<Dictionary<string, object>>(workflow.SettingsJson) : null,
             ExecutionCount = executions.Count,
             LastExecutedAt = executions.OrderByDescending(e => e.StartedAt).FirstOrDefault()?.StartedAt,
-            AverageExecutionTime = executions.Where(e => e.Duration.HasValue).Average(e => e.Duration!.Value.TotalMilliseconds),
+            AverageExecutionTime = executions.Any(e => e.Duration.HasValue)
+                ? executions.Where(e => e.Duration.HasValue).Average(e => e.Duration!.Value.TotalMilliseconds)
+                : 0,
             SuccessRate = executions.Count > 0 ?
                 (double)executions.Count(e => e.Status == ExecutionStatus.Completed) / executions.Count * 100 : 0
         };

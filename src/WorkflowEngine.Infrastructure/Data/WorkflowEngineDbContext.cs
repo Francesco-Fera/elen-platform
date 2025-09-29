@@ -21,6 +21,8 @@ public class WorkflowEngineDbContext : DbContext
     public DbSet<WorkflowPermission> WorkflowPermissions { get; set; } = null!;
     public DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; } = null!;
     public DbSet<PasswordResetToken> PasswordResetTokens { get; set; } = null!;
+    public DbSet<UserCredential> UserCredentials { get; set; }
+    public DbSet<CredentialType> CredentialTypes { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -30,7 +32,45 @@ public class WorkflowEngineDbContext : DbContext
         ConfigureUserEntities(modelBuilder);
         ConfigureWorkflowEntities(modelBuilder);
         ConfigureOrganizationEntities(modelBuilder);
+        ConfigureCredentialsEntities(modelBuilder);
         ConfigureIndexes(modelBuilder);
+    }
+
+    private void ConfigureCredentialsEntities(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<UserCredential>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.EncryptedData).IsRequired();
+            entity.Property(e => e.EncryptionKeyId).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ValidationStatus).HasMaxLength(20);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.CredentialType)
+                .WithMany(ct => ct.UserCredentials)
+                .HasForeignKey(e => e.CredentialTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.UserId);
+            entity.HasIndex(e => e.CredentialTypeId);
+        });
+
+        // CredentialType configuration
+        modelBuilder.Entity<CredentialType>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Key).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.AuthType).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.FieldsJson).IsRequired();
+
+            entity.HasIndex(e => e.Key).IsUnique();
+        });
     }
 
     private void ConfigureUserEntities(ModelBuilder modelBuilder)

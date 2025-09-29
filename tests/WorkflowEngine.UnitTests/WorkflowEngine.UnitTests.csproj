@@ -28,6 +28,7 @@
 		<ProjectReference Include="..\..\src\WorkflowEngine.Core\WorkflowEngine.Core.csproj" />
 		<ProjectReference Include="..\..\src\WorkflowEngine.Application\WorkflowEngine.Application.csproj" />
 		<ProjectReference Include="..\..\src\WorkflowEngine.Infrastructure\WorkflowEngine.Infrastructure.csproj" />
+		<ProjectReference Include="..\..\src\WorkflowEngine.Nodes\WorkflowEngine.Nodes.csproj" />
 	</ItemGroup>
 
 </Project>

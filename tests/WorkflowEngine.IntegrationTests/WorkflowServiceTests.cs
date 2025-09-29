@@ -924,6 +924,609 @@ public class WorkflowServiceTests : IDisposable
 
     #endregion
 
+    #region Get Executions Tests
+
+    [Fact]
+    public async Task GetWorkflowExecutionsAsync_ShouldReturnExecutions_WhenExecutionsExist()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        var execution1 = new WorkflowExecution
+        {
+            WorkflowId = workflow.Id,
+            Status = ExecutionStatus.Completed,
+            TriggerType = ExecutionTrigger.Manual,
+            StartedAt = DateTime.UtcNow.AddHours(-2),
+            CompletedAt = DateTime.UtcNow.AddHours(-1),
+            Duration = TimeSpan.FromMinutes(60)
+        };
+
+        var execution2 = new WorkflowExecution
+        {
+            WorkflowId = workflow.Id,
+            Status = ExecutionStatus.Failed,
+            TriggerType = ExecutionTrigger.Webhook,
+            StartedAt = DateTime.UtcNow.AddHours(-1),
+            CompletedAt = DateTime.UtcNow,
+            Duration = TimeSpan.FromMinutes(30)
+        };
+
+        _context.WorkflowExecutions.AddRange(execution1, execution2);
+        await _context.SaveChangesAsync();
+
+        var request = new GetExecutionsRequest { Page = 1, Limit = 10 };
+
+        // Act
+        var result = await _workflowService.GetWorkflowExecutionsAsync(workflow.Id, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Executions.Count);
+        Assert.Equal(2, result.Pagination.Total);
+    }
+
+    [Fact]
+    public async Task GetWorkflowExecutionsAsync_ShouldFilterByStatus_WhenStatusProvided()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        _context.WorkflowExecutions.AddRange(
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                Status = ExecutionStatus.Completed,
+                StartedAt = DateTime.UtcNow
+            },
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                Status = ExecutionStatus.Failed,
+                StartedAt = DateTime.UtcNow
+            },
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                Status = ExecutionStatus.Completed,
+                StartedAt = DateTime.UtcNow
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        var request = new GetExecutionsRequest
+        {
+            Page = 1,
+            Limit = 10,
+            Status = ExecutionStatus.Completed
+        };
+
+        // Act
+        var result = await _workflowService.GetWorkflowExecutionsAsync(workflow.Id, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Executions.Count);
+        Assert.All(result.Executions, e => Assert.Equal(ExecutionStatus.Completed, e.Status));
+    }
+
+    [Fact]
+    public async Task GetWorkflowExecutionsAsync_ShouldFilterByTriggerType_WhenTriggerTypeProvided()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        _context.WorkflowExecutions.AddRange(
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                TriggerType = ExecutionTrigger.Manual,
+                StartedAt = DateTime.UtcNow
+            },
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                TriggerType = ExecutionTrigger.Webhook,
+                StartedAt = DateTime.UtcNow
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        var request = new GetExecutionsRequest
+        {
+            Page = 1,
+            Limit = 10,
+            TriggerType = ExecutionTrigger.Manual
+        };
+
+        // Act
+        var result = await _workflowService.GetWorkflowExecutionsAsync(workflow.Id, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result.Executions);
+        Assert.Equal(ExecutionTrigger.Manual, result.Executions[0].TriggerType);
+    }
+
+    [Fact]
+    public async Task GetWorkflowExecutionsAsync_ShouldFilterByDateRange_WhenDatesProvided()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        var now = DateTime.UtcNow;
+        _context.WorkflowExecutions.AddRange(
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                StartedAt = now.AddDays(-5),
+                CompletedAt = now.AddDays(-5)
+            },
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                StartedAt = now.AddDays(-2),
+                CompletedAt = now.AddDays(-2)
+            },
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                StartedAt = now.AddDays(-1),
+                CompletedAt = now.AddDays(-1)
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        var request = new GetExecutionsRequest
+        {
+            Page = 1,
+            Limit = 10,
+            StartedAfter = now.AddDays(-3),
+            StartedBefore = now
+        };
+
+        // Act
+        var result = await _workflowService.GetWorkflowExecutionsAsync(workflow.Id, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Executions.Count); // Only last 2 executions
+    }
+
+    [Fact]
+    public async Task GetWorkflowExecutionsAsync_ShouldSortByDuration_WhenSortByDuration()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        _context.WorkflowExecutions.AddRange(
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                StartedAt = DateTime.UtcNow,
+                Duration = TimeSpan.FromMinutes(10)
+            },
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                StartedAt = DateTime.UtcNow,
+                Duration = TimeSpan.FromMinutes(30)
+            },
+            new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                StartedAt = DateTime.UtcNow,
+                Duration = TimeSpan.FromMinutes(5)
+            }
+        );
+        await _context.SaveChangesAsync();
+
+        var request = new GetExecutionsRequest
+        {
+            Page = 1,
+            Limit = 10,
+            SortBy = "duration",
+            SortOrder = "asc"
+        };
+
+        // Act
+        var result = await _workflowService.GetWorkflowExecutionsAsync(workflow.Id, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Executions.Count);
+        Assert.True(result.Executions[0].DurationMs < result.Executions[1].DurationMs);
+        Assert.True(result.Executions[1].DurationMs < result.Executions[2].DurationMs);
+    }
+
+    [Fact]
+    public async Task GetWorkflowExecutionsAsync_ShouldThrowException_WhenNoAccess()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Private Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        _mockCurrentUserService.Setup(x => x.CanAccessWorkflowAsync(workflow.Id))
+            .ReturnsAsync(false);
+
+        var request = new GetExecutionsRequest { Page = 1, Limit = 10 };
+
+        // Act & Assert
+        await Assert.ThrowsAsync<WorkflowAccessDeniedException>(
+            () => _workflowService.GetWorkflowExecutionsAsync(workflow.Id, request)
+        );
+    }
+
+    [Fact]
+    public async Task GetWorkflowExecutionsAsync_ShouldPaginate_WhenMultiplePages()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        for (int i = 0; i < 25; i++)
+        {
+            _context.WorkflowExecutions.Add(new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                StartedAt = DateTime.UtcNow.AddMinutes(-i)
+            });
+        }
+        await _context.SaveChangesAsync();
+
+        var request = new GetExecutionsRequest { Page = 2, Limit = 10 };
+
+        // Act
+        var result = await _workflowService.GetWorkflowExecutionsAsync(workflow.Id, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(10, result.Executions.Count);
+        Assert.Equal(25, result.Pagination.Total);
+        Assert.Equal(3, result.Pagination.TotalPages);
+        Assert.True(result.Pagination.HasPrevious);
+        Assert.True(result.Pagination.HasNext);
+    }
+
+    #endregion
+
+    #region Permission Tests
+
+    [Fact]
+    public async Task CanUserAccessWorkflowAsync_ShouldReturnTrue_WhenUserHasAccess()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        _mockCurrentUserService.Setup(x => x.CanAccessWorkflowAsync(workflow.Id))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _workflowService.CanUserAccessWorkflowAsync(workflow.Id, _testUserId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task CanUserEditWorkflowAsync_ShouldReturnTrue_WhenUserIsOwner()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _workflowService.CanUserEditWorkflowAsync(workflow.Id, _testUserId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task CanUserEditWorkflowAsync_ShouldReturnTrue_WhenUserHasPermission()
+    {
+        // Arrange
+        var otherUserId = Guid.NewGuid();
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = otherUserId // Different user
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        _mockCurrentUserService.Setup(x => x.HasPermissionAsync("edit_workflows"))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await _workflowService.CanUserEditWorkflowAsync(workflow.Id, _testUserId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task CanUserEditWorkflowAsync_ShouldReturnFalse_WhenNoPermission()
+    {
+        // Arrange
+        var otherUserId = Guid.NewGuid();
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = otherUserId
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        _mockCurrentUserService.Setup(x => x.HasPermissionAsync("edit_workflows"))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _workflowService.CanUserEditWorkflowAsync(workflow.Id, _testUserId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task CanUserDeleteWorkflowAsync_ShouldReturnTrue_WhenUserIsOwner()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _workflowService.CanUserDeleteWorkflowAsync(workflow.Id, _testUserId);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task CanUserDeleteWorkflowAsync_ShouldReturnFalse_WhenNoPermission()
+    {
+        // Arrange
+        var otherUserId = Guid.NewGuid();
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = otherUserId
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        _mockCurrentUserService.Setup(x => x.HasPermissionAsync("delete_workflows"))
+            .ReturnsAsync(false);
+
+        // Act
+        var result = await _workflowService.CanUserDeleteWorkflowAsync(workflow.Id, _testUserId);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    #endregion
+
+    #region Edge Cases and Error Handling
+
+    [Fact]
+    public async Task GetWorkflowsAsync_ShouldReturnEmpty_WhenNoWorkflowsInOrganization()
+    {
+        // Arrange
+        var request = new GetWorkflowsRequest { Page = 1, Limit = 10 };
+
+        // Act
+        var result = await _workflowService.GetWorkflowsAsync(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result.Workflows);
+        Assert.Equal(0, result.Pagination.Total);
+    }
+
+    [Fact]
+    public async Task GetWorkflowsAsync_ShouldHandleLargePageSize_WhenLimitExceeds100()
+    {
+        // Arrange
+        for (int i = 0; i < 150; i++)
+        {
+            _context.Workflows.Add(new Workflow
+            {
+                Name = $"Workflow {i}",
+                OrganizationId = _testOrgId,
+                CreatedBy = _testUserId
+            });
+        }
+        await _context.SaveChangesAsync();
+
+        var request = new GetWorkflowsRequest
+        {
+            Page = 1,
+            Limit = 100 // Max allowed
+        };
+
+        // Act
+        var result = await _workflowService.GetWorkflowsAsync(request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(100, result.Workflows.Count);
+        Assert.Equal(150, result.Pagination.Total);
+    }
+
+    [Fact]
+    public async Task ValidateWorkflowAsync_ShouldThrowException_WhenWorkflowNotFound()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<WorkflowNotFoundException>(
+            () => _workflowService.ValidateWorkflowAsync(Guid.NewGuid())
+        );
+    }
+
+    [Fact]
+    public async Task GetWorkflowStatisticsAsync_ShouldCalculateMedian_WhenMultipleExecutions()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        // Add executions with specific durations for median calculation
+        var durations = new[] { 10, 20, 30, 40, 50 }; // Median should be 30
+        foreach (var duration in durations)
+        {
+            _context.WorkflowExecutions.Add(new WorkflowExecution
+            {
+                WorkflowId = workflow.Id,
+                Status = ExecutionStatus.Completed,
+                Duration = TimeSpan.FromSeconds(duration),
+                StartedAt = DateTime.UtcNow
+            });
+        }
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _workflowService.GetWorkflowStatisticsAsync(workflow.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(30000, result.MedianExecutionTimeMs); // 30 seconds in ms
+    }
+
+    [Fact]
+    public async Task GetWorkflowStatisticsAsync_ShouldCountExecutionsInTimeRanges()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Test Workflow",
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId
+        };
+        _context.Workflows.Add(workflow);
+
+        var now = DateTime.UtcNow;
+        _context.WorkflowExecutions.AddRange(
+            new WorkflowExecution { WorkflowId = workflow.Id, StartedAt = now.AddHours(-1) },
+            new WorkflowExecution { WorkflowId = workflow.Id, StartedAt = now.AddHours(-12) },
+            new WorkflowExecution { WorkflowId = workflow.Id, StartedAt = now.AddDays(-3) },
+            new WorkflowExecution { WorkflowId = workflow.Id, StartedAt = now.AddDays(-10) },
+            new WorkflowExecution { WorkflowId = workflow.Id, StartedAt = now.AddDays(-40) }
+        );
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _workflowService.GetWorkflowStatisticsAsync(workflow.Id);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(2, result.ExecutionsLast24Hours);
+        Assert.Equal(3, result.ExecutionsLast7Days);
+        Assert.Equal(4, result.ExecutionsLast30Days);
+    }
+
+    [Fact]
+    public async Task UpdateWorkflowAsync_ShouldOnlyUpdateProvidedFields()
+    {
+        // Arrange
+        var workflow = new Workflow
+        {
+            Name = "Original Name",
+            Description = "Original Description",
+            Visibility = WorkflowVisibility.Private,
+            OrganizationId = _testOrgId,
+            CreatedBy = _testUserId,
+            CreatedAt = DateTime.UtcNow,
+            LastModified = DateTime.UtcNow
+        };
+        _context.Workflows.Add(workflow);
+        await _context.SaveChangesAsync();
+
+        var request = new UpdateWorkflowRequest
+        {
+            Name = "Updated Name"
+            // Description and Visibility not provided
+        };
+
+        // Act
+        var result = await _workflowService.UpdateWorkflowAsync(workflow.Id, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Updated Name", result.Name);
+        Assert.Equal("Original Description", result.Description); // Should remain unchanged
+        Assert.Equal(WorkflowVisibility.Private, result.Visibility); // Should remain unchanged
+    }
+
+    #endregion
+
     public void Dispose()
     {
         _context.Database.EnsureDeleted();

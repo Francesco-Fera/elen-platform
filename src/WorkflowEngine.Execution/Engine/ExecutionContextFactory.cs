@@ -18,20 +18,20 @@ public class ExecutionContextFactory : IExecutionContextFactory
             ["$execution"] = new Dictionary<string, object>
             {
                 ["id"] = executionId,
+                ["workflowId"] = workflowId,
+                ["workflowName"] = workflowName,
                 ["startedAt"] = DateTime.UtcNow
-            },
-            ["$workflow"] = new Dictionary<string, object>
-            {
-                ["id"] = workflowId,
-                ["name"] = workflowName
-            },
-            ["$input"] = inputData ?? new Dictionary<string, object>(),
-            ["$env"] = new Dictionary<string, object>
-            {
-                ["timezone"] = TimeZoneInfo.Local.Id,
-                ["utcNow"] = DateTime.UtcNow
             }
         };
+
+        if (inputData != null && inputData.Count > 0)
+        {
+            context["$input"] = inputData;
+        }
+        else
+        {
+            context["$input"] = new Dictionary<string, object>();
+        }
 
         return context;
     }

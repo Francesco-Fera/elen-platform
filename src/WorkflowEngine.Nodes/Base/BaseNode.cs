@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using System.Text.Json;
 using WorkflowEngine.Nodes.Interfaces;
 using WorkflowEngine.Nodes.Models;
 
@@ -66,10 +67,27 @@ public abstract class BaseNode : INode
         {
             foreach (var parameter in operation.Parameters.Where(p => p.Required))
             {
-                if (!context.Parameters.ContainsKey(parameter.Name) ||
-                    context.Parameters[parameter.Name] == null)
+                if (!context.Parameters.ContainsKey(parameter.Name))
                 {
                     errors.Add($"Required parameter '{parameter.Name}' is missing");
+                    continue;
+                }
+
+                var value = context.Parameters[parameter.Name];
+
+                if (value == null)
+                {
+                    errors.Add($"Required parameter '{parameter.Name}' is missing");
+                    continue;
+                }
+
+                if (value is JsonElement jsonElement)
+                {
+                    if (jsonElement.ValueKind == JsonValueKind.Null ||
+                        jsonElement.ValueKind == JsonValueKind.Undefined)
+                    {
+                        errors.Add($"Required parameter '{parameter.Name}' is missing");
+                    }
                 }
             }
         }
@@ -83,8 +101,14 @@ public abstract class BaseNode : INode
     protected T GetRequiredParameter<T>(NodeExecutionContext context, string name)
     {
         var value = context.GetParameter<T>(name);
-        if (value == null)
+
+        // More robust null checking
+        if (value == null ||
+            (value is JsonElement je && (je.ValueKind == JsonValueKind.Null || je.ValueKind == JsonValueKind.Undefined)))
+        {
             throw new ArgumentException($"Required parameter '{name}' is missing or invalid");
+        }
+
         return value;
     }
 

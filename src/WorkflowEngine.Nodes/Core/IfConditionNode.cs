@@ -80,7 +80,8 @@ public class IfConditionNode : BaseProcessingNode
             ["result"] = result,
             ["value1"] = value1,
             ["value2"] = value2,
-            ["operator"] = operatorType
+            ["operator"] = operatorType,
+            ["conditionalOutput"] = result ? "true" : "false"
         }));
     }
 

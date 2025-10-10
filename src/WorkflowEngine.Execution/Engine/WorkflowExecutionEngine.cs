@@ -410,10 +410,10 @@ public class WorkflowExecutionEngine : IWorkflowExecutionEngine
     }
 
     private bool ShouldExecuteNode(
-        string nodeId,
-        WorkflowGraph graph,
-        HashSet<string> completedNodes,
-        Dictionary<string, object> workflowContext)
+    string nodeId,
+    WorkflowGraph graph,
+    HashSet<string> completedNodes,
+    Dictionary<string, object> workflowContext)
     {
         var incomingEdges = graph.GetIncomingEdges(nodeId);
 
@@ -425,24 +425,89 @@ public class WorkflowExecutionEngine : IWorkflowExecutionEngine
             if (!completedNodes.Contains(edge.SourceNodeId))
                 return false;
 
+            // If edge has non-default output (conditional branching)
             if (edge.SourceOutput != "default")
             {
                 var contextKey = $"$node.{edge.SourceNodeId}";
-                if (workflowContext.TryGetValue(contextKey, out var nodeData))
+                if (!workflowContext.TryGetValue(contextKey, out var nodeData))
                 {
-                    if (nodeData is Dictionary<string, object> dataDict)
-                    {
-                        if (dataDict.TryGetValue("conditionalOutput", out var output))
-                        {
-                            if (output?.ToString() != edge.SourceOutput)
-                                return false;
-                        }
-                    }
+                    _logger.LogWarning(
+                        "Node context not found for {SourceNodeId}, skipping node {NodeId}",
+                        edge.SourceNodeId, nodeId);
+                    return false;
+                }
+
+                // Get the conditional output to determine which branch to take
+                var conditionalOutput = GetConditionalOutput(nodeData);
+
+                if (conditionalOutput == null)
+                {
+                    _logger.LogWarning(
+                        "No conditional output found for node {SourceNodeId}, cannot determine branch for {NodeId}",
+                        edge.SourceNodeId, nodeId);
+                    return false;
+                }
+
+                if (conditionalOutput != edge.SourceOutput)
+                {
+                    _logger.LogDebug(
+                        "Skipping node {NodeId} - conditional output was '{Output}', but edge expects '{Expected}'",
+                        nodeId, conditionalOutput, edge.SourceOutput);
+                    return false;
                 }
             }
         }
 
         return true;
+    }
+
+    private string? GetConditionalOutput(object nodeData)
+    {
+        // Handle Dictionary<string, object>
+        if (nodeData is Dictionary<string, object> dataDict)
+        {
+            // First check for conditionalOutput at root level
+            if (dataDict.TryGetValue("conditionalOutput", out var output))
+            {
+                return output?.ToString();
+            }
+
+            // Fallback: check inside "data" dictionary
+            if (dataDict.TryGetValue("data", out var data))
+            {
+                if (data is Dictionary<string, object> outputData &&
+                    outputData.TryGetValue("conditionalOutput", out var conditionalOutput))
+                {
+                    return conditionalOutput?.ToString();
+                }
+
+                // Handle data as JsonElement
+                if (data is JsonElement dataElement &&
+                    dataElement.ValueKind == JsonValueKind.Object &&
+                    dataElement.TryGetProperty("conditionalOutput", out var conditionalOutputElement))
+                {
+                    return conditionalOutputElement.GetString();
+                }
+            }
+        }
+
+        // Handle JsonElement
+        if (nodeData is JsonElement jsonElement && jsonElement.ValueKind == JsonValueKind.Object)
+        {
+            if (jsonElement.TryGetProperty("conditionalOutput", out var outputElement))
+            {
+                return outputElement.GetString();
+            }
+
+            if (jsonElement.TryGetProperty("data", out var dataElement) &&
+                dataElement.ValueKind == JsonValueKind.Object &&
+                dataElement.TryGetProperty("conditionalOutput", out var conditionalOutputElement))
+            {
+                return conditionalOutputElement.GetString();
+            }
+        }
+
+        return null;
     }
 
     private async Task<Models.ExecutionResult> HandleCancellationAsync(
